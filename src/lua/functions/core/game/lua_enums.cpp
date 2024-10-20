@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "lua/functions/core/game/lua_enums.hpp"
 
 #include "creatures/players/wheel/wheel_gems.hpp"
@@ -18,8 +20,6 @@
 #include "game/functions/game_reload.hpp"
 #include "enums/account_type.hpp"
 #include "enums/account_group_type.hpp"
-
-constexpr const char* soundNamespace = "SOUND_EFFECT_TYPE_";
 
 #define registerMagicEnum(luaState, enumClassType)               \
 	{                                                            \
@@ -109,9 +109,6 @@ void LuaEnums::init(lua_State* L) {
 	initWebhookEnums(L);
 	initBosstiaryEnums(L);
 	initSoundEnums(L);
-	spelltSoundEnums(L);
-	monsterSoundEnums(L);
-	effectsSoundEnums(L);
 	initWheelEnums(L);
 	initAttributeConditionSubIdEnums(L);
 	initConcoctionsEnum(L);
@@ -898,7 +895,7 @@ void LuaEnums::initItemIdEnums(lua_State* L) {
 	registerEnum(L, ITEM_OLD_DIAMOND_ARROW);
 	registerEnum(L, ITEM_DIAMOND_ARROW);
 
-	registerEnum(L, ITEM_GOLD_POUCH);
+	registerEnum(L, PREMIUM_LOOT_POUCH);
 	registerEnum(L, ITEM_STORE_INBOX);
 
 	registerEnum(L, ITEM_DIVINE_EMPOWERMENT);
@@ -1247,6 +1244,7 @@ void LuaEnums::initBosstiaryEnums(lua_State* L) {
 
 // "SOUND_EFFECT_TYPE_" is the sound lua namespace
 void LuaEnums::initSoundEnums(lua_State* L) {
+	std::string soundNamespace = "SOUND_EFFECT_TYPE_";
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SILENCE);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::HUMAN_CLOSE_ATK_FIST);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_CLOSE_ATK_FIST);
@@ -1276,9 +1274,6 @@ void LuaEnums::initSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_MELEE_ATK_MAGIC);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_MELEE_ATK_ETHEREAL);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_MELEE_ATK_CONSTRUCT);
-}
-
-void LuaEnums::spelltSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_LIGHT_HEALING);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_INTENSE_HEALING);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_ULTIMATE_HEALING);
@@ -1430,9 +1425,6 @@ void LuaEnums::spelltSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_EXPOSE_WEAKNESS);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_SAP_STRENGTH);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::SPELL_CANCEL_MAGIC_SHIELD);
-}
-
-void LuaEnums::monsterSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_SINGLE_TARGET_FIRE);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_SINGLE_TARGET_ENERGY);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_SINGLE_TARGET_EARTH);
@@ -1497,9 +1489,6 @@ void LuaEnums::monsterSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_HIGHRISK_TELEPORT);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_MINION);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::MONSTER_SPELL_AGONY);
-}
-
-void LuaEnums::effectsSoundEnums(lua_State* L) {
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::AMPHIBIC_BARK);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::AQUATIC_BEAST_BARK);
 	registerEnumNamespace(L, soundNamespace, SoundEffect_t::AQUATIC_CRITTER_BARK);

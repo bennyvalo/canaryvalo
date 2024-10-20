@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "io/iologindata.hpp"
 #include "io/functions/iologindata_load_player.hpp"
 #include "io/functions/iologindata_save_player.hpp"
@@ -26,7 +28,7 @@ bool IOLoginData::gameWorldAuthentication(const std::string &accountDescriptor, 
 		return false;
 	}
 
-	if (g_configManager().getString(AUTH_TYPE) == "session") {
+	if (g_configManager().getString(AUTH_TYPE, __FUNCTION__) == "session") {
 		if (!account.authenticate()) {
 			return false;
 		}
@@ -116,7 +118,7 @@ bool IOLoginData::loadPlayer(std::shared_ptr<Player> player, DBResult_ptr result
 
 	try {
 		// First
-		IOLoginDataLoad::loadPlayerBasicInfo(player, result);
+		IOLoginDataLoad::loadPlayerFirst(player, result);
 
 		// Experience load
 		IOLoginDataLoad::loadPlayerExperience(player, result);
@@ -202,21 +204,15 @@ bool IOLoginData::loadPlayer(std::shared_ptr<Player> player, DBResult_ptr result
 }
 
 bool IOLoginData::savePlayer(std::shared_ptr<Player> player) {
-	try {
-		bool success = DBTransaction::executeWithinTransaction([player]() {
-			return savePlayerGuard(player);
-		});
+	bool success = DBTransaction::executeWithinTransaction([player]() {
+		return savePlayerGuard(player);
+	});
 
-		if (!success) {
-			g_logger().error("[{}] Error occurred saving player", __FUNCTION__);
-		}
-
-		return success;
-	} catch (const DatabaseException &e) {
-		g_logger().error("[{}] Exception occurred: {}", __FUNCTION__, e.what());
+	if (!success) {
+		g_logger().error("[{}] Error occurred saving player", __FUNCTION__);
 	}
 
-	return false;
+	return success;
 }
 
 bool IOLoginData::savePlayerGuard(std::shared_ptr<Player> player) {

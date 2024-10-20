@@ -481,7 +481,7 @@ enum ItemID_t : uint16_t {
 	ITEM_DECORATION_KIT = 23398, // For internal use (wrap item)
 	ITEM_DOCUMENT_RO = 2834, // Read-only
 
-	ITEM_GOLD_POUCH = 23721,
+	PREMIUM_LOOT_POUCH = 60024,
 
 	ITEM_DEPOT_I = 22797,
 	ITEM_DEPOT_II = 22798,

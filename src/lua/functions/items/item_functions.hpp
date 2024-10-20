@@ -23,7 +23,6 @@ public:
 
 		registerMethod(L, "Item", "isItem", ItemFunctions::luaItemIsItem);
 
-		registerMethod(L, "Item", "getContainer", ItemFunctions::luaItemGetContainer);
 		registerMethod(L, "Item", "getParent", ItemFunctions::luaItemGetParent);
 		registerMethod(L, "Item", "getTopParent", ItemFunctions::luaItemGetTopParent);
 
@@ -88,6 +87,8 @@ public:
 		registerMethod(L, "Item", "getTier", ItemFunctions::luaItemGetTier);
 		registerMethod(L, "Item", "setTier", ItemFunctions::luaItemSetTier);
 		registerMethod(L, "Item", "getClassification", ItemFunctions::luaItemGetClassification);
+		registerMethod(L, "Item", "getItemLevel", ItemFunctions::luaItemGetItemLevel); 
+		registerMethod(L, "Item", "setItemLevel", ItemFunctions::luaItemSetItemLevel);
 
 		registerMethod(L, "Item", "canReceiveAutoCarpet", ItemFunctions::luaItemCanReceiveAutoCarpet);
 
@@ -102,7 +103,6 @@ private:
 
 	static int luaItemIsItem(lua_State* L);
 
-	static int luaItemGetContainer(lua_State* L);
 	static int luaItemGetParent(lua_State* L);
 	static int luaItemGetTopParent(lua_State* L);
 
@@ -169,4 +169,6 @@ private:
 	static int luaItemIsOwner(lua_State* L);
 	static int luaItemGetOwnerName(lua_State* L);
 	static int luaItemHasOwner(lua_State* L);
+	static int luaItemGetItemLevel(lua_State* L);
+	static int luaItemSetItemLevel(lua_State* L);
 };

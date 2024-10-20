@@ -7,16 +7,17 @@
  * Website: https://docs.opentibiabr.org/
  */
 
+#include "pch.hpp"
+
 #include "creatures/players/wheel/player_wheel.hpp"
 
-#include "config/configmanager.hpp"
 #include "io/io_wheel.hpp"
+
 #include "game/game.hpp"
-#include "server/network/message/networkmessage.hpp"
 #include "creatures/players/player.hpp"
 #include "creatures/combat/spells.hpp"
-#include "kv/kv.hpp"
-#include "creatures/players/wheel/wheel_gems.hpp"
+
+#include "config/configmanager.hpp"
 
 const static std::vector<WheelGemBasicModifier_t> wheelGemBasicSlot1Allowed = {
 	WheelGemBasicModifier_t::General_FireResistance,
@@ -143,7 +144,9 @@ namespace {
 } // namespace
 
 PlayerWheel::PlayerWheel(Player &initPlayer) :
-	m_pointsPerLevel(g_configManager().getNumber(WHEEL_POINTS_PER_LEVEL)), m_player(initPlayer) {
+	m_player(initPlayer) {
+	auto pointsPerLevel = (uint16_t)g_configManager().getNumber(WHEEL_POINTS_PER_LEVEL, __FUNCTION__);
+	m_pointsPerLevel = pointsPerLevel > 0 ? pointsPerLevel : 1;
 }
 
 bool PlayerWheel::canPlayerSelectPointOnSlot(WheelSlots_t slot, bool recursive) const {
@@ -771,18 +774,12 @@ std::vector<PlayerWheelGem> PlayerWheel::getRevealedGems() const {
 	if (unlockedGemUUIDs.empty()) {
 		return unlockedGems;
 	}
-
 	std::vector<std::string> sortedUnlockedGemGUIDs;
 	for (const auto &uuid : unlockedGemUUIDs) {
 		sortedUnlockedGemGUIDs.push_back(uuid);
 	}
-
 	std::sort(sortedUnlockedGemGUIDs.begin(), sortedUnlockedGemGUIDs.end(), [](const std::string &a, const std::string &b) {
-		if (std::ranges::all_of(a, ::isdigit) && std::ranges::all_of(b, ::isdigit)) {
-			return std::stoull(a) < std::stoull(b);
-		} else {
-			return a < b;
-		}
+		return std::stoull(a) < std::stoull(b);
 	});
 
 	for (const auto &uuid : sortedUnlockedGemGUIDs) {
@@ -832,7 +829,7 @@ uint64_t PlayerWheel::getGemRotateCost(WheelGemQuality_t quality) {
 		default:
 			return 0;
 	}
-	return static_cast<uint64_t>(g_configManager().getNumber(key));
+	return static_cast<uint64_t>(g_configManager().getNumber(key, __FUNCTION__));
 }
 
 uint64_t PlayerWheel::getGemRevealCost(WheelGemQuality_t quality) {
@@ -850,7 +847,7 @@ uint64_t PlayerWheel::getGemRevealCost(WheelGemQuality_t quality) {
 		default:
 			return 0;
 	}
-	return static_cast<uint64_t>(g_configManager().getNumber(key));
+	return static_cast<uint64_t>(g_configManager().getNumber(key, __FUNCTION__));
 }
 
 void PlayerWheel::revealGem(WheelGemQuality_t quality) {
@@ -1008,7 +1005,7 @@ void PlayerWheel::addGems(NetworkMessage &msg) const {
 }
 
 void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) const {
-	if (m_player.client && m_player.client->oldProtocol) {
+	if (m_player.client && m_player.client->isOldProtocol()) {
 		return;
 	}
 
@@ -1040,7 +1037,7 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) con
 }
 
 void PlayerWheel::sendGiftOfLifeCooldown() const {
-	if (!m_player.client || m_player.client->oldProtocol) {
+	if (!m_player.client || m_player.client->isOldProtocol()) {
 		return;
 	}
 
@@ -1091,7 +1088,7 @@ void PlayerWheel::saveSlotPointsHandleRetryErrors(std::vector<SlotInfo> &retryTa
 }
 
 void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
-	if (m_player.client && m_player.client->oldProtocol) {
+	if (m_player.client && m_player.client->isOldProtocol()) {
 		return;
 	}
 
@@ -1353,10 +1350,6 @@ void PlayerWheel::resetPlayerBonusData() {
 }
 
 void PlayerWheel::initializePlayerData() {
-	if (m_player.client && m_player.client->oldProtocol) {
-		return;
-	}
-
 	resetPlayerBonusData();
 	loadPlayerBonusData();
 }
@@ -3153,47 +3146,4 @@ WheelGemBasicModifier_t PlayerWheel::selectBasicModifier2(WheelGemBasicModifier_
 		modifier = wheelGemBasicSlot2Allowed[uniform_random(0, wheelGemBasicSlot2Allowed.size() - 1)];
 	}
 	return modifier;
-}
-
-void PlayerWheelGem::save(const std::shared_ptr<KV> &kv) const {
-	kv->scoped("revealed")->set(uuid, serialize());
-}
-void PlayerWheelGem::remove(const std::shared_ptr<KV> &kv) const {
-	kv->scoped("revealed")->remove(uuid);
-}
-
-PlayerWheelGem PlayerWheelGem::load(const std::shared_ptr<KV> &kv, const std::string &uuid) {
-	auto val = kv->scoped("revealed")->get(uuid);
-	if (!val || !val.has_value()) {
-		return {};
-	}
-	return deserialize(uuid, val.value());
-}
-
-ValueWrapper PlayerWheelGem::serialize() const {
-	return {
-		{ "uuid", uuid },
-		{ "locked", locked },
-		{ "affinity", static_cast<IntType>(affinity) },
-		{ "quality", static_cast<IntType>(quality) },
-		{ "basicModifier1", static_cast<IntType>(basicModifier1) },
-		{ "basicModifier2", static_cast<IntType>(basicModifier2) },
-		{ "supremeModifier", static_cast<IntType>(supremeModifier) }
-	};
-}
-
-PlayerWheelGem PlayerWheelGem::deserialize(const std::string &uuid, const ValueWrapper &val) {
-	auto map = val.get<MapType>();
-	if (map.empty()) {
-		return {};
-	}
-	return {
-		uuid,
-		map["locked"]->get<BooleanType>(),
-		static_cast<WheelGemAffinity_t>(map["affinity"]->get<IntType>()),
-		static_cast<WheelGemQuality_t>(map["quality"]->get<IntType>()),
-		static_cast<WheelGemBasicModifier_t>(map["basicModifier1"]->get<IntType>()),
-		static_cast<WheelGemBasicModifier_t>(map["basicModifier2"]->get<IntType>()),
-		static_cast<WheelGemSupremeModifier_t>(map["supremeModifier"]->get<IntType>())
-	};
 }

@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "mapcache.hpp"
 
 #include "game/movement/teleport.hpp"
@@ -93,9 +95,7 @@ std::shared_ptr<Item> MapCache::createItem(const std::shared_ptr<BasicItem> &Bas
 		item->setItemCount(1);
 	}
 
-	if (item->canDecay()) {
-		item->startDecaying();
-	}
+	item->startDecaying();
 	item->loadedFromMap = true;
 	item->decayDisabled = Item::items[item->getID()].decayTo != -1;
 

@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "server/network/webhook/webhook.hpp"
 #include "config/configmanager.hpp"
 #include "game/scheduling/dispatcher.hpp"
@@ -38,7 +40,7 @@ Webhook &Webhook::getInstance() {
 void Webhook::run() {
 	threadPool.detach_task([this] { sendWebhook(); });
 	g_dispatcher().scheduleEvent(
-		g_configManager().getNumber(DISCORD_WEBHOOK_DELAY_MS), [this] { run(); }, "Webhook::run"
+		g_configManager().getNumber(DISCORD_WEBHOOK_DELAY_MS, __FUNCTION__), [this] { run(); }, "Webhook::run"
 	);
 }
 
@@ -49,7 +51,7 @@ void Webhook::sendPayload(const std::string &payload, std::string url) {
 
 void Webhook::sendMessage(const std::string &title, const std::string &message, int color, std::string url, bool embed) {
 	if (url.empty()) {
-		url = g_configManager().getString(DISCORD_WEBHOOK_URL);
+		url = g_configManager().getString(DISCORD_WEBHOOK_URL, __FUNCTION__);
 	}
 
 	if (url.empty() || title.empty() || message.empty()) {
@@ -61,7 +63,7 @@ void Webhook::sendMessage(const std::string &title, const std::string &message, 
 
 void Webhook::sendMessage(const std::string &message, std::string url) {
 	if (url.empty()) {
-		url = g_configManager().getString(DISCORD_WEBHOOK_URL);
+		url = g_configManager().getString(DISCORD_WEBHOOK_URL, __FUNCTION__);
 	}
 
 	if (url.empty() || message.empty()) {
@@ -117,7 +119,7 @@ std::string Webhook::getPayload(const std::string &title, const std::string &mes
 
 	std::stringstream footer_text;
 	footer_text
-		<< g_configManager().getString(SERVER_NAME) << " | "
+		<< g_configManager().getString(SERVER_NAME, __FUNCTION__) << " | "
 		<< time_buf;
 
 	std::stringstream payload;
@@ -127,7 +129,7 @@ std::string Webhook::getPayload(const std::string &title, const std::string &mes
 		if (!message.empty()) {
 			payload << "\"description\": \"" << message << "\", ";
 		}
-		if (g_configManager().getBoolean(DISCORD_SEND_FOOTER)) {
+		if (g_configManager().getBoolean(DISCORD_SEND_FOOTER, __FUNCTION__)) {
 			payload << "\"footer\": { \"text\": \"" << footer_text.str() << "\" }, ";
 		}
 		if (color >= 0) {
@@ -147,7 +149,7 @@ void Webhook::sendWebhook() {
 		return;
 	}
 
-	const auto &task = webhooks.front();
+	auto task = webhooks.front();
 
 	std::string response_body;
 	auto response_code = sendRequest(task->url.c_str(), task->payload.c_str(), &response_body);
@@ -162,6 +164,8 @@ void Webhook::sendWebhook() {
 		return;
 	}
 
+	webhooks.pop_front();
+
 	if (response_code >= 300) {
 		g_logger().error(
 			"Failed to send webhook message, error code: {} response body: {} request body: {}",
@@ -174,7 +178,4 @@ void Webhook::sendWebhook() {
 	}
 
 	g_logger().debug("Webhook successfully sent to {}", task->url);
-
-	// Removes the object after processing everything, avoiding memory usage after freeing
-	webhooks.pop_front();
 }

@@ -30,6 +30,7 @@ class ProtocolGame;
 class PreySlot;
 class TaskHuntingSlot;
 class TaskHuntingOption;
+class Livestream;
 
 struct ModalWindow;
 struct Achievement;
@@ -46,10 +47,10 @@ struct TextMessage {
 	MessageClasses type = MESSAGE_STATUS;
 	std::string text;
 	Position position;
-	uint16_t channelId {};
+	uint16_t channelId;
 	struct
 	{
-		int32_t value {};
+		int32_t value = 0;
 		TextColor_t color = TEXTCOLOR_NONE;
 	} primary, secondary;
 };
@@ -78,6 +79,17 @@ public:
 		return version;
 	}
 
+std::shared_ptr<Player> getPlayer() const {
+		return player;
+	}
+
+	static const std::unordered_map<std::shared_ptr<Player>, ProtocolGame*> &getLiveCasts() {
+		return liveCasts;
+	}
+
+	void insertCaster();
+	void removeCaster();
+
 private:
 	ProtocolGame_ptr getThis() {
 		return std::static_pointer_cast<ProtocolGame>(shared_from_this());
@@ -96,7 +108,7 @@ private:
 
 	// we have all the parse methods
 	void parsePacket(NetworkMessage &msg) override;
-	void parsePacketFromDispatcher(NetworkMessage &msg, uint8_t recvbyte);
+	void parsePacketFromDispatcher(NetworkMessage msg, uint8_t recvbyte);
 	void onRecvFirstMessage(NetworkMessage &msg) override;
 	void onConnect() override;
 
@@ -143,14 +155,14 @@ private:
 
 	void parseGreet(NetworkMessage &msg);
 	void parseBugReport(NetworkMessage &msg);
-	void parseOfferDescription(NetworkMessage &msg);
+	void parseDebugAssert(NetworkMessage &msg);
 	void parsePreyAction(NetworkMessage &msg);
 	void parseSendResourceBalance();
 	void parseRuleViolationReport(NetworkMessage &msg);
 
 	void parseBestiarysendRaces();
 	void parseBestiarysendCreatures(NetworkMessage &msg);
-	void BestiarysendCharms();
+	void sendBestiaryCharms();
 	void sendBestiaryEntryChanged(uint16_t raceid);
 	void refreshCyclopediaMonsterTracker(const std::unordered_set<std::shared_ptr<MonsterType>> &trackerSet, bool isBoss);
 	void sendTeamFinderList();
@@ -481,9 +493,19 @@ private:
 	void parseSaveWheel(NetworkMessage &msg);
 	void parseWheelGemAction(NetworkMessage &msg);
 
+	// Cast Viewer
+	void castViewerLogin(const std::string &name, const std::string &password);
+	void sendCastViewerAppear(std::shared_ptr<Player> foundPlayer);
+	void syncCastViewerOpenContainers(std::shared_ptr<Player> foundPlayer);
+	void syncCastViewerCloseContainers();
+	bool canWatchCast(std::shared_ptr<Player> foundPlayer) const;
+
 	friend class Player;
 	friend class PlayerWheel;
 	friend class PlayerVIP;
+	friend class Livestream;
+
+	static std::unordered_map<std::shared_ptr<Player>, ProtocolGame*> liveCasts;
 
 	std::unordered_set<uint32_t> knownCreatureSet;
 	std::shared_ptr<Player> player = nullptr;
@@ -505,6 +527,11 @@ private:
 
 	uint16_t otclientV8 = 0;
 	bool isOTC = false;
+
+	// Cast Viewer
+	bool m_isCastViewer = false;
+	int64_t m_castCooldownTime = 0;
+	uint32_t m_castCount = 0;
 
 	void sendInventory();
 	void sendOpenStash();

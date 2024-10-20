@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "io/functions/iologindata_save_player.hpp"
 #include "game/game.hpp"
 
@@ -82,13 +84,14 @@ bool IOLoginDataSave::saveItems(std::shared_ptr<Player> player, const ItemBlockL
 		const ContainerBlock &cb = queue.front();
 		std::shared_ptr<Container> container = cb.first;
 		int32_t parentId = cb.second;
+		queue.pop_front();
 
 		if (!container) {
 			continue; // Check for null container
 		}
 
 		// Loop through items in container
-		for (auto &item : container->getItemList()) {
+		for (std::shared_ptr<Item> item : container->getItemList()) {
 			if (!item) {
 				continue; // Check for null item
 			}
@@ -96,7 +99,7 @@ bool IOLoginDataSave::saveItems(std::shared_ptr<Player> player, const ItemBlockL
 			++runningId;
 
 			// Update sub-container attributes if necessary
-			const auto &subContainer = item->getContainer();
+			std::shared_ptr<Container> subContainer = item->getContainer();
 			if (subContainer) {
 				queue.emplace_back(subContainer, runningId);
 				if (subContainer->getAttribute<int64_t>(ItemAttribute_t::OPENCONTAINER) > 0) {
@@ -120,7 +123,6 @@ bool IOLoginDataSave::saveItems(std::shared_ptr<Player> player, const ItemBlockL
 			try {
 				propWriteStream.clear();
 				item->serializeAttr(propWriteStream);
-				item->stopDecaying();
 			} catch (...) {
 				g_logger().error("Error serializing item attributes in container.");
 				return false;
@@ -136,9 +138,6 @@ bool IOLoginDataSave::saveItems(std::shared_ptr<Player> player, const ItemBlockL
 				return false;
 			}
 		}
-
-		// Removes the object after processing everything, avoiding memory usage after freeing
-		queue.pop_front();
 	}
 
 	// Execute query
@@ -588,7 +587,7 @@ bool IOLoginDataSave::savePlayerPreyClass(std::shared_ptr<Player> player) {
 	}
 
 	Database &db = Database::getInstance();
-	if (g_configManager().getBoolean(PREY_ENABLED)) {
+	if (g_configManager().getBoolean(PREY_ENABLED, __FUNCTION__)) {
 		std::ostringstream query;
 		for (uint8_t slotId = PreySlot_First; slotId <= PreySlot_Last; slotId++) {
 			if (const auto &slot = player->getPreySlotById(static_cast<PreySlot_t>(slotId))) {
@@ -606,7 +605,7 @@ bool IOLoginDataSave::savePlayerPreyClass(std::shared_ptr<Player> player) {
 					  << slot->freeRerollTimeStamp << ", ";
 
 				PropWriteStream propPreyStream;
-				std::ranges::for_each(slot->raceIdList, [&propPreyStream](uint16_t raceId) {
+				std::ranges::for_each(slot->raceIdList.begin(), slot->raceIdList.end(), [&propPreyStream](uint16_t raceId) {
 					propPreyStream.write<uint16_t>(raceId);
 				});
 
@@ -642,7 +641,7 @@ bool IOLoginDataSave::savePlayerTaskHuntingClass(std::shared_ptr<Player> player)
 	}
 
 	Database &db = Database::getInstance();
-	if (g_configManager().getBoolean(TASK_HUNTING_ENABLED)) {
+	if (g_configManager().getBoolean(TASK_HUNTING_ENABLED, __FUNCTION__)) {
 		std::ostringstream query;
 		for (uint8_t slotId = PreySlot_First; slotId <= PreySlot_Last; slotId++) {
 			if (const auto &slot = player->getTaskHuntingSlotById(static_cast<PreySlot_t>(slotId))) {
@@ -659,7 +658,7 @@ bool IOLoginDataSave::savePlayerTaskHuntingClass(std::shared_ptr<Player> player)
 				query << slot->freeRerollTimeStamp << ", ";
 
 				PropWriteStream propTaskHuntingStream;
-				std::ranges::for_each(slot->raceIdList, [&propTaskHuntingStream](uint16_t raceId) {
+				std::ranges::for_each(slot->raceIdList.begin(), slot->raceIdList.end(), [&propTaskHuntingStream](uint16_t raceId) {
 					propTaskHuntingStream.write<uint16_t>(raceId);
 				});
 

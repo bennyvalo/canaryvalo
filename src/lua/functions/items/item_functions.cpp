@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "lua/functions/items/item_functions.hpp"
 
 #include "game/game.hpp"
@@ -34,25 +36,6 @@ int ItemFunctions::luaItemCreate(lua_State* L) {
 int ItemFunctions::luaItemIsItem(lua_State* L) {
 	// item:isItem()
 	pushBoolean(L, getUserdataShared<const Item>(L, 1) != nullptr);
-	return 1;
-}
-
-int ItemFunctions::luaItemGetContainer(lua_State* L) {
-	// item:getContainer()
-	const auto &item = getUserdataShared<Item>(L, 1);
-	if (!item) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	const auto &container = item->getContainer();
-	if (!container) {
-		g_logger().trace("Item {} is not a container", item->getName());
-		pushBoolean(L, false);
-		return 1;
-	}
-
-	pushUserdata(L, container);
 	return 1;
 }
 
@@ -910,6 +893,31 @@ int ItemFunctions::luaItemSetTier(lua_State* L) {
 	}
 
 	item->setTier(getNumber<uint8_t>(L, 2));
+	pushBoolean(L, true);
+	return 1;
+}
+
+int ItemFunctions::luaItemGetItemLevel(lua_State* L) {
+	std::shared_ptr<Item> item = getUserdataShared<Item>(L, 1);
+	if (!item) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_ITEM_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	lua_pushnumber(L, item->getItemLevel());
+	return 1;
+}
+
+int ItemFunctions::luaItemSetItemLevel(lua_State* L) {
+	std::shared_ptr<Item> item = getUserdataShared<Item>(L, 1);
+	if (!item) {
+		reportErrorFunc(getErrorDesc(LUA_ERROR_ITEM_NOT_FOUND));
+		pushBoolean(L, false);
+		return 1;
+	}
+
+	item->setItemLevel(getNumber<uint8_t>(L, 2));
 	pushBoolean(L, true);
 	return 1;
 }

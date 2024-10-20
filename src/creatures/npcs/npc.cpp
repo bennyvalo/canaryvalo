@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "creatures/npcs/npc.hpp"
 #include "creatures/npcs/npcs.hpp"
 #include "declarations.hpp"
@@ -35,7 +37,7 @@ Npc::Npc(const std::shared_ptr<NpcType> &npcType) :
 	npcType(npcType) {
 	defaultOutfit = npcType->info.outfit;
 	currentOutfit = npcType->info.outfit;
-	float multiplier = g_configManager().getFloat(RATE_NPC_HEALTH);
+	float multiplier = g_configManager().getFloat(RATE_NPC_HEALTH, __FUNCTION__);
 	health = npcType->info.health * multiplier;
 	healthMax = npcType->info.healthMax * multiplier;
 	baseSpeed = npcType->info.baseSpeed;
@@ -310,7 +312,7 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 	if (!player) {
 		return;
 	}
-	if (itemId == ITEM_GOLD_POUCH) {
+	if (itemId == PREMIUM_LOOT_POUCH) {
 		auto container = player->getLootPouch();
 		if (!container) {
 			return;
@@ -339,7 +341,7 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 		}
 		auto ss = std::stringstream();
 		if (totalPrice == 0) {
-			ss << "You have no items in your loot pouch.";
+			ss << "You have no items in your premiun loot pouch.";
 			player->sendTextMessage(MESSAGE_TRANSACTION, ss.str());
 			return;
 		}
@@ -349,7 +351,7 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 			);
 			return;
 		}
-		ss << "You sold all of the items from your loot pouch for ";
+		ss << "You sold all of the items from your premiun loot pouch for ";
 		ss << totalPrice << " gold.";
 		player->sendTextMessage(MESSAGE_TRANSACTION, ss.str());
 		player->openPlayerContainers();
@@ -360,7 +362,7 @@ void Npc::onPlayerSellItem(std::shared_ptr<Player> player, uint16_t itemId, uint
 	if (!player) {
 		return;
 	}
-	if (itemId == ITEM_GOLD_POUCH) {
+	if (itemId == PREMIUM_LOOT_POUCH) {
 		g_dispatcher().scheduleEvent(
 			SCHEDULER_MINTICKS, [this, playerId = player->getID(), itemId, ignore] { onPlayerSellAllLoot(playerId, itemId, ignore, 0); }, __FUNCTION__
 		);
@@ -385,18 +387,7 @@ void Npc::onPlayerSellItem(std::shared_ptr<Player> player, uint16_t itemId, uint
 			continue;
 		}
 
-		if (const auto &container = item->getContainer()) {
-			if (container->size() > 0) {
-				player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "You must empty the container before selling it.");
-				continue;
-			}
-		}
-
 		if (parent && item->getParent() != parent) {
-			continue;
-		}
-
-		if (!item->hasMarketAttributes()) {
 			continue;
 		}
 
@@ -414,16 +405,12 @@ void Npc::onPlayerSellItem(std::shared_ptr<Player> player, uint16_t itemId, uint
 	}
 
 	auto totalRemoved = amount - toRemove;
-	if (totalRemoved == 0) {
-		return;
-	}
-
 	auto totalCost = static_cast<uint64_t>(sellPrice * totalRemoved);
 	g_logger().debug("[Npc::onPlayerSellItem] - Removing items from player {} amount {} of items with id {} on shop for npc {}", player->getName(), toRemove, itemId, getName());
 	if (totalRemoved > 0 && totalCost > 0) {
 		if (getCurrency() == ITEM_GOLD_COIN) {
 			totalPrice += totalCost;
-			if (g_configManager().getBoolean(AUTOBANK)) {
+			if (g_configManager().getBoolean(AUTOBANK, __FUNCTION__)) {
 				player->setBankBalance(player->getBankBalance() + totalCost);
 			} else {
 				g_game().addMoney(player, totalCost);

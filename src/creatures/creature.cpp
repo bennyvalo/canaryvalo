@@ -7,6 +7,8 @@
  * Website: https://docs.opentibiabr.com/
  */
 
+#include "pch.hpp"
+
 #include "creatures/creature.hpp"
 #include "declarations.hpp"
 #include "game/scheduling/dispatcher.hpp"
@@ -256,7 +258,7 @@ void Creature::addEventWalk(bool firstStep) {
 				g_game().checkCreatureWalk(self->getID());
 			}
 
-			self->eventWalk = g_dispatcher().scheduleEvent(
+		self->eventWalk = g_dispatcher().scheduleEvent(
 				static_cast<uint32_t>(ticks),
 				[creatureId = self->getID()] {
 					g_game().checkCreatureWalk(creatureId);
@@ -488,7 +490,7 @@ void Creature::onCreatureMove(const std::shared_ptr<Creature> &creature, const s
 			stopEventWalk();
 		}
 
-		bool configTeleportSummons = g_configManager().getBoolean(TELEPORT_SUMMONS);
+		bool configTeleportSummons = g_configManager().getBoolean(TELEPORT_SUMMONS, __FUNCTION__);
 		checkSummonMove(newPos, configTeleportSummons);
 		if (isLostSummon()) {
 			handleLostSummon(configTeleportSummons);
@@ -649,7 +651,7 @@ void Creature::onDeath() {
 	std::shared_ptr<Creature> mostDamageCreature = nullptr;
 
 	const int64_t timeNow = OTSYS_TIME();
-	const uint32_t inFightTicks = g_configManager().getNumber(PZ_LOCKED);
+	const uint32_t inFightTicks = g_configManager().getNumber(PZ_LOCKED, __FUNCTION__);
 	int32_t mostDamage = 0;
 	std::map<std::shared_ptr<Creature>, uint64_t> experienceMap;
 	std::unordered_set<std::shared_ptr<Player>> killers;
@@ -809,7 +811,7 @@ bool Creature::dropCorpse(std::shared_ptr<Creature> lastHitCreature, std::shared
 				auto monster = getMonster();
 				if (monster && !monster->isRewardBoss()) {
 					std::ostringstream lootMessage;
-					auto collorMessage = player->getProtocolVersion() > 1200;
+					auto collorMessage = player->getProtocolVersion() > 1200 && player->getOperatingSystem() < CLIENTOS_OTCLIENT_LINUX;
 					lootMessage << "Loot of " << getNameDescription() << ": " << corpseContainer->getContentDescription(collorMessage) << ".";
 					auto suffix = corpseContainer->getAttribute<std::string>(ItemAttribute_t::LOOTMESSAGE_SUFFIX);
 					if (!suffix.empty()) {
@@ -855,7 +857,7 @@ bool Creature::hasBeenAttacked(uint32_t attackerId) {
 	if (it == damageMap.end()) {
 		return false;
 	}
-	return (OTSYS_TIME() - it->second.ticks) <= g_configManager().getNumber(PZ_LOCKED);
+	return (OTSYS_TIME() - it->second.ticks) <= g_configManager().getNumber(PZ_LOCKED, __FUNCTION__);
 }
 
 std::shared_ptr<Item> Creature::getCorpse(std::shared_ptr<Creature>, std::shared_ptr<Creature>) {
@@ -954,7 +956,7 @@ BlockType_t Creature::blockHit(std::shared_ptr<Creature> attacker, CombatType_t 
 	// Apply skills 12.72 absorbs damage
 	applyAbsorbDamageModifications(attacker, damage, combatType);
 
-	if (getMonster() && g_configManager().getBoolean(DISABLE_MONSTER_ARMOR)) {
+	if (getMonster() && g_configManager().getBoolean(DISABLE_MONSTER_ARMOR, __FUNCTION__)) {
 		checkDefense = false;
 		checkArmor = false;
 	}

@@ -283,6 +283,11 @@ private:
 		registerMethod(L, "Player", "getIdleTime", PlayerFunctions::luaPlayerGetIdleTime);
 		registerMethod(L, "Player", "getFreeBackpackSlots", PlayerFunctions::luaPlayerGetFreeBackpackSlots);
 
+		//SaveLevel Stats
+		registerMethod(L, "Player", "saveLevelStats", PlayerFunctions::luaPlayerSaveLevelStats);
+		registerMethod(L, "Player", "restoreLevelStats", PlayerFunctions::luaPlayerRestoreLevelStats);
+		registerMethod(L, "Player", "setLevelStats", PlayerFunctions::luaPlayerSetLevelStats);
+
 		registerMethod(L, "Player", "isOffline", PlayerFunctions::luaPlayerIsOffline);
 
 		registerMethod(L, "Player", "openMarket", PlayerFunctions::luaPlayerOpenMarket);
@@ -363,6 +368,12 @@ private:
 		registerMethod(L, "Player", "getAchievementPoints", PlayerFunctions::luaPlayerGetAchievementPoints);
 		registerMethod(L, "Player", "addAchievementPoints", PlayerFunctions::luaPlayerAddAchievementPoints);
 		registerMethod(L, "Player", "removeAchievementPoints", PlayerFunctions::luaPlayerRemoveAchievementPoints);
+
+		// Cast Functions
+		registerMethod(L, "Player", "getCastViewersCount", PlayerFunctions::luaPlayerGetCastViewersCount);
+		registerMethod(L, "Player", "getCastViewers", PlayerFunctions::luaPlayerGetCastViewers);
+		registerMethod(L, "Player", "setCastViewers", PlayerFunctions::luaPlayerSetCastViewers);
+		registerMethod(L, "Player", "isCastViewer", PlayerFunctions::luaPlayerIsCastViewer);
 
 		// Badge Functions
 		registerMethod(L, "Player", "addBadge", PlayerFunctions::luaPlayerAddBadge);
@@ -653,6 +664,11 @@ private:
 	static int luaPlayerGetIdleTime(lua_State* L);
 	static int luaPlayerGetFreeBackpackSlots(lua_State* L);
 
+	//SaveLevel Stats
+	static int luaPlayerSaveLevelStats(lua_State* L);
+	static int luaPlayerRestoreLevelStats(lua_State* L);
+	static int luaPlayerSetLevelStats(lua_State* L);
+
 	static int luaPlayerOpenMarket(lua_State* L);
 
 	static int luaPlayerInstantSkillWOD(lua_State* L);
@@ -745,6 +761,10 @@ private:
 	static int luaPlayerTakeScreenshot(lua_State* L);
 	static int luaPlayerSendIconBakragore(lua_State* L);
 	static int luaPlayerRemoveIconBakragore(lua_State* L);
+	static int luaPlayerGetCastViewersCount(lua_State* L);
+	static int luaPlayerGetCastViewers(lua_State* L);
+	static int luaPlayerSetCastViewers(lua_State* L);
+	static int luaPlayerIsCastViewer(lua_State* L);
 
 	static int luaPlayerSendCreatureAppear(lua_State* L);
 
