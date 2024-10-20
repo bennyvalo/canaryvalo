@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "items/item.hpp"
 #include "items/containers/container.hpp"
 #include "items/decay/decay.hpp"
@@ -766,17 +764,6 @@ Attr_ReadValue Item::readAttr(AttrTypes_t attr, PropStream &propStream) {
 			break;
 		}
 
-		case ATTR_ITEMLEVEL: {
-			uint8_t itemlevel;
-			if (!propStream.read<uint8_t>(itemlevel)) {
-				g_logger().error("[{}] failed to read level", __FUNCTION__);
-				return ATTR_READ_ERROR;
-			}
-
-			setAttribute(ItemAttribute_t::ITEMLEVEL, itemlevel);
-			break;
-		}
-
 		case ATTR_AMOUNT: {
 			uint16_t amount;
 			if (!propStream.read<uint16_t>(amount)) {
@@ -1000,11 +987,6 @@ void Item::serializeAttr(PropWriteStream &propWriteStream) const {
 	if (hasAttribute(ItemAttribute_t::TIER)) {
 		propWriteStream.write<uint8_t>(ATTR_TIER);
 		propWriteStream.write<uint8_t>(getTier());
-	}
-
-	if (hasAttribute(ItemAttribute_t::ITEMLEVEL)) {
-		propWriteStream.write<uint8_t>(ATTR_ITEMLEVEL);
-		propWriteStream.write<uint8_t>(getItemLevel());
 	}
 
 	if (hasAttribute(AMOUNT)) {
@@ -1421,7 +1403,6 @@ Item::getDescriptions(const ItemType &it, std::shared_ptr<Item> item /*= nullptr
 
 		if (it.upgradeClassification > 0) {
 			descriptions.emplace_back("Tier", std::to_string(item->getTier()));
-			descriptions.emplace_back("Level", std::to_string(item->getItemLevel()));
 		}
 
 		std::string slotName;
@@ -2025,14 +2006,6 @@ SoundEffect_t Item::getMovementSound(std::shared_ptr<Cylinder> toCylinder) const
 
 std::string Item::parseClassificationDescription(std::shared_ptr<Item> item) {
 	std::ostringstream string;
-	if (item && item->getItemLevel() >= 1) {
-		string << std::endl
-		<< " Level: " << std::to_string(item->getItemLevel());
-		if (item->getWeaponType() == 6) {
-			string << " (Increase Magic Level +" << std::to_string(item->getItemLevel()) << ").";
-		}
-	}
-
 	if (item && item->getClassification() >= 1) {
 		string << std::endl
 			   << "Classification: " << std::to_string(item->getClassification()) << " Tier: " << std::to_string(item->getTier());
@@ -3185,16 +3158,17 @@ void Item::addUniqueId(uint16_t uniqueId) {
 }
 
 bool Item::canDecay() {
-	if (isRemoved() || isDecayDisabled()) {
-		return false;
-	}
-
 	const ItemType &it = Item::items[id];
-	if (it.decayTo < 0 || it.decayTime == 0) {
+	if (it.decayTo < 0 || it.decayTime == 0 || isDecayDisabled()) {
 		return false;
 	}
 
 	if (hasAttribute(ItemAttribute_t::UNIQUEID)) {
+		return false;
+	}
+
+	// In certain conditions, such as depth nested containers, this can overload the CPU, so it is left last.
+	if (isRemoved()) {
 		return false;
 	}
 

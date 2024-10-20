@@ -148,7 +148,6 @@ std::string getObjectCategoryName(ObjectCategory_t category);
 bool isValidObjectCategory(ObjectCategory_t category);
 
 int64_t OTSYS_TIME(bool useTime = false);
-int64_t OTSYS_STEADY_TIME();
 void UPDATE_OTSYS_TIME();
 
 SpellGroup_t stringToSpellGroup(const std::string &value);
@@ -221,3 +220,5 @@ template <typename EnumType, typename UnderlyingType = std::underlying_type_t<En
 EnumType enumFromValue(UnderlyingType value) {
 	return static_cast<EnumType>(value);
 }
+
+bool caseInsensitiveCompare(std::string_view str1, std::string_view str2, size_t length = std::string_view::npos);

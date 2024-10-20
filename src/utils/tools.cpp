@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "core.hpp"
 #include "items/item.hpp"
 #include "utils/tools.hpp"
@@ -1221,8 +1219,6 @@ ItemAttribute_t stringToItemAttribute(const std::string &str) {
 		return ItemAttribute_t::TIER;
 	} else if (str == "lootmessagesuffix") {
 		return ItemAttribute_t::LOOTMESSAGE_SUFFIX;
-	} else if (str == "itemlevel") {
-		return ItemAttribute_t::ITEMLEVEL;
 	}
 
 	g_logger().error("[{}] attribute type {} is not registered", __FUNCTION__, str);
@@ -1522,10 +1518,6 @@ int64_t OTSYS_TIME(bool useTime) {
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 	return OTSYSTIME;
-}
-
-int64_t OTSYS_STEADY_TIME() {
-	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 SpellGroup_t stringToSpellGroup(const std::string &value) {
@@ -1959,4 +1951,19 @@ uint8_t convertWheelGemAffinityToDomain(uint8_t affinity) {
 			g_logger().error("Failed to get gem affinity {}", affinity);
 			return 0;
 	}
+}
+
+bool caseInsensitiveCompare(std::string_view str1, std::string_view str2, size_t length /*= std::string_view::npos*/) {
+	if (length == std::string_view::npos) {
+		if (str1.size() != str2.size()) {
+			return false;
+		}
+		length = str1.size();
+	} else {
+		length = std::min({ length, str1.size(), str2.size() });
+	}
+
+	return std::equal(str1.begin(), str1.begin() + length, str2.begin(), [](char c1, char c2) {
+		return std::tolower(static_cast<unsigned char>(c1)) == std::tolower(static_cast<unsigned char>(c2));
+	});
 }

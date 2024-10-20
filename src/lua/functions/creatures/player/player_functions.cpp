@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "lua/functions/creatures/player/player_functions.hpp"
 
 #include "creatures/combat/spells.hpp"
@@ -31,8 +29,6 @@
 #include "enums/account_errors.hpp"
 #include "enums/account_type.hpp"
 #include "enums/account_coins.hpp"
-
-#include "creatures/players/cast/livestream.hpp"
 
 int PlayerFunctions::luaPlayerSendInventory(lua_State* L) {
 	// player:sendInventory()
@@ -114,7 +110,7 @@ int PlayerFunctions::luaPlayerUpdateKillTracker(lua_State* L) {
 		return 1;
 	}
 
-	player->sendKillTrackerUpdate(corpse, monster->getName(), monster->getCurrentOutfit());
+	player->updateKillTracker(corpse, monster->getName(), monster->getCurrentOutfit());
 	pushBoolean(L, true);
 
 	return 1;
@@ -1868,6 +1864,8 @@ int PlayerFunctions::luaPlayerAddItem(lua_State* L) {
 			if (!hasTable) {
 				lua_pushnil(L);
 			}
+
+			player->sendCancelMessage(ret);
 			return 1;
 		}
 
@@ -3340,72 +3338,6 @@ int PlayerFunctions::luaPlayerGetFreeBackpackSlots(lua_State* L) {
 	return 1;
 }
 
-//SaveLevel Stats
-int PlayerFunctions::luaPlayerSaveLevelStats(lua_State* L) {
-	// player:saveLevelStats()
-	Player* player = getUserdata<Player>(L, 1);
-	if (!player) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	player->savedPlayerLevel = player->level;
-	player->savedPlayerExperience = player->experience;
-	player->savedPlayerHP = player->health;
-	player->savedPlayerMaxHP = player->healthMax;
-	player->savedPlayerMP = player->mana;
-	player->savedPlayerMaxMP = player->manaMax;
-	player->savedPlayerCap = player->capacity;
-	lua_pushnumber(L, 1);
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerRestoreLevelStats(lua_State* L)
-{
-	// player:restoreLevelStats()
-	Player* player = getUserdata<Player>(L, 1);
-	if (!player) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	player->level = player->savedPlayerLevel;
-	player->experience = player->savedPlayerExperience;
-	player->health = player->savedPlayerHP;
-	player->healthMax = player->savedPlayerMaxHP;
-	player->mana = player->savedPlayerMP;
-	player->manaMax = player->savedPlayerMaxMP;
-	player->capacity = player->savedPlayerCap;
-	player->sendStats();
-	lua_pushnumber(L, 1);
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerSetLevelStats(lua_State* L)
-{
-	// player:setLevelStats(level)
-	Player* player = getUserdata<Player>(L, 1);
-	if (!player) {
-		lua_pushnil(L);
-		return 1;
-	}
-
-	int32_t level = getNumber<int32_t>(L, 2);
-	if (level == 0) {
-		lua_pushnumber(L, 0);
-		return 1;
-	}
-
-	player->removeExperience(player->getExperience());
-	player->sendStats();
-
-	player->addExperience(nullptr, Player::getExpForLevel(level), false);
-	player->sendStats();
-
-	lua_pushnumber(L, 1);
-	return 1;
-}
-
 int PlayerFunctions::luaPlayerIsOffline(lua_State* L) {
 	std::shared_ptr<Player> player = getUserdataShared<Player>(L, 1);
 	if (player) {
@@ -4523,157 +4455,5 @@ int PlayerFunctions::luaPlayerSendCreatureAppear(lua_State* L) {
 	bool isLogin = getBoolean(L, 2, false);
 	player->sendCreatureAppear(player, player->getPosition(), isLogin);
 	pushBoolean(L, true);
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerGetCastViewersCount(lua_State* L) {
-	// player:getCastViewersCount()
-	auto player = getUserdataShared<Player>(L, 1);
-	if (!player) {
-		reportErrorFunc(getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
-		return 1;
-	}
-
-	lua_pushnumber(L, player->client->getCastViewerCount());
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerGetCastViewers(lua_State* L) {
-	// player:getCastViewers()
-	auto player = getUserdataShared<Player>(L, 1);
-	if (!player) {
-		reportErrorFunc(getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
-		pushBoolean(L, false);
-		return 1;
-	}
-
-	lua_newtable(L);
-	setField(L, "description", player->client->getCastDescription());
-	setCastFieldBool(L, "broadcast", player->client->isCastBroadcasting());
-	setField(L, "password", player->client->getCastPassword());
-
-	createCastTable(L, "names");
-	auto viwers = player->client->getViewers();
-
-	StringVector::const_iterator it = viwers.begin();
-	for (uint32_t i = 1; it != viwers.end(); ++it, ++i) {
-		lua_pushnumber(L, i);
-		lua_pushstring(L, (*it).c_str());
-		lua_settable(L, -3);
-	}
-
-	lua_settable(L, -3);
-	createCastTable(L, "mutes");
-	const auto &mute = player->client->getMuteCastList();
-
-	it = mute.begin();
-	for (uint32_t i = 1; it != mute.end(); ++it, ++i) {
-		lua_pushnumber(L, i);
-		lua_pushstring(L, (*it).c_str());
-		lua_settable(L, -3);
-	}
-
-	lua_settable(L, -3);
-	createCastTable(L, "bans");
-	const auto &banList = player->client->getBanCastList();
-
-	std::map<std::string, uint32_t>::const_iterator _it = banList.begin();
-	for (uint32_t i = 1; _it != banList.end(); ++_it, ++i) {
-		lua_pushnumber(L, i);
-		lua_pushstring(L, _it->first.c_str());
-		lua_settable(L, -3);
-	}
-
-	lua_settable(L, -3);
-	createCastTable(L, "kick");
-	lua_settable(L, -3);
-
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerSetCastViewers(lua_State* L) {
-	// player:setCastViewers()
-	std::string description = getCastFieldString(L, "description");
-	std::string password = getCastFieldString(L, "password");
-	bool broadcast = getCastFieldBool(L, "broadcast");
-
-	StringVector kickedVector, mutedVector, banedVector;
-	lua_pushstring(L, "mutes");
-	lua_gettable(L, -2);
-
-	lua_pushnil(L);
-	while (lua_next(L, -2)) {
-		mutedVector.push_back(asLowerCaseString(lua_tostring(L, -1)));
-		lua_pop(L, 1);
-	}
-
-	lua_pop(L, 1);
-	lua_pushstring(L, "bans");
-	lua_gettable(L, -2);
-
-	lua_pushnil(L);
-	while (lua_next(L, -2)) {
-		banedVector.push_back(asLowerCaseString(lua_tostring(L, -1)));
-		lua_pop(L, 1);
-	}
-
-	lua_pop(L, 1);
-	lua_pushstring(L, "kick");
-	lua_gettable(L, -2);
-
-	lua_pushnil(L);
-	while (lua_next(L, -2)) {
-		kickedVector.push_back(asLowerCaseString(lua_tostring(L, -1)));
-		lua_pop(L, 1);
-	}
-
-	lua_pop(L, 2);
-	auto player = getUserdataShared<Player>(L, 1);
-	if (!player) {
-		reportErrorFunc(getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
-		pushBoolean(L, false);
-		return 1;
-	}
-
-	if (player->client->getCastPassword() != password && !password.empty()) {
-		player->client->clear(false);
-	}
-
-	player->client->setCastPassword(password);
-	if (!broadcast && player->client->isCastBroadcasting()) {
-		player->client->clear(false);
-	}
-
-	player->client->setKickViewer(kickedVector);
-	player->client->setMuteViewer(mutedVector);
-	player->client->setBanViewer(banedVector);
-
-	if (!player->client->isCastBroadcasting()) {
-		player->client->setCastBroadcastTime(OTSYS_TIME());
-	}
-
-	player->client->setCastBroadcast(broadcast);
-
-	if (broadcast) {
-		player->client->insertCaster();
-		player->sendChannel(CHANNEL_CAST, "Livestream", nullptr, nullptr);
-	}
-
-	player->client->setCastDescription(description);
-	pushBoolean(L, true);
-
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerIsCastViewer(lua_State* L) {
-	// player:isCastViewer()
-	const auto &player = getUserdataShared<Player>(L, 1);
-	if (!player) {
-		reportErrorFunc(getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
-		pushBoolean(L, false);
-		return 1;
-	}
-
-	pushBoolean(L, player->isCastViewer());
 	return 1;
 }

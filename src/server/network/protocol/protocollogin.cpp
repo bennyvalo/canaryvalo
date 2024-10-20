@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "server/network/protocol/protocollogin.hpp"
 #include "server/network/message/outputmessage.hpp"
 #include "game/scheduling/dispatcher.hpp"
@@ -23,7 +21,7 @@ void ProtocolLogin::disconnectClient(const std::string &message) {
 	auto output = OutputMessagePool::getOutputMessage();
 
 	output->addByte(0x0B);
-	output->addString(message, "ProtocolLogin::disconnectClient - message");
+	output->addString(message);
 	send(output);
 
 	disconnect();
@@ -33,7 +31,7 @@ void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const
 	Account account(accountDescriptor);
 	account.setProtocolCompat(oldProtocol);
 
-	if (oldProtocol && !g_configManager().getBoolean(OLD_PROTOCOL, __FUNCTION__)) {
+	if (oldProtocol && !g_configManager().getBoolean(OLD_PROTOCOL)) {
 		disconnectClient(fmt::format("Only protocol version {}.{} is allowed.", CLIENT_VERSION_UPPER, CLIENT_VERSION_LOWER));
 		return;
 	} else if (!oldProtocol) {
@@ -49,7 +47,7 @@ void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const
 	}
 
 	auto output = OutputMessagePool::getOutputMessage();
-	const std::string &motd = g_configManager().getString(SERVER_MOTD, __FUNCTION__);
+	const std::string &motd = g_configManager().getString(SERVER_MOTD);
 	if (!motd.empty()) {
 		// Add MOTD
 		output->addByte(0x14);
@@ -57,12 +55,12 @@ void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const
 		std::ostringstream ss;
 		ss << g_game().getMotdNum() << "\n"
 		   << motd;
-		output->addString(ss.str(), "ProtocolLogin::getCharacterList - ss.str()");
+		output->addString(ss.str());
 	}
 
 	// Add session key
 	output->addByte(0x28);
-	output->addString(accountDescriptor + "\n" + password, "ProtocolLogin::getCharacterList - accountDescriptor + password");
+	output->addString(accountDescriptor + "\n" + password);
 
 	// Add char list
 	auto [players, result] = account.getAccountPlayers();
@@ -75,10 +73,10 @@ void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const
 	output->addByte(1); // number of worlds
 
 	output->addByte(0); // world id
-	output->addString(g_configManager().getString(SERVER_NAME, __FUNCTION__), "ProtocolLogin::getCharacterList - _configManager().getString(SERVER_NAME)");
-	output->addString(g_configManager().getString(IP, __FUNCTION__), "ProtocolLogin::getCharacterList - g_configManager().getString(IP)");
+	output->addString(g_configManager().getString(SERVER_NAME));
+	output->addString(g_configManager().getString(IP));
 
-	output->add<uint16_t>(g_configManager().getNumber(GAME_PORT, __FUNCTION__));
+	output->add<uint16_t>(g_configManager().getNumber(GAME_PORT));
 
 	output->addByte(0);
 
@@ -86,7 +84,7 @@ void ProtocolLogin::getCharacterList(const std::string &accountDescriptor, const
 	output->addByte(size);
 	for (const auto &[name, deletion] : players) {
 		output->addByte(0);
-		output->addString(name, "ProtocolLogin::getCharacterList - name");
+		output->addString(name);
 	}
 
 	// Get premium days, check is premium and get lastday
@@ -169,18 +167,6 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage &msg) {
 	}
 
 	std::string password = msg.getString();
-	// Cast system login (show casting players on old protocol)
-	if (accountDescriptor == "@cast") {
-		if (!ProtocolGame::getLiveCasts().size()) {
-			disconnectClient("There are no players with the cast on.");
-			return;
-		}
-
-		auto thisPtr = std::static_pointer_cast<ProtocolLogin>(shared_from_this());
-		g_dispatcher().addEvent(std::bind(&ProtocolLogin::getCastViewersList, thisPtr, password), "ProtocolLogin::getCastViewersList");
-		return;
-	}
-	
 	if (password.empty()) {
 		disconnectClient("Invalid password.");
 		return;
@@ -192,55 +178,4 @@ void ProtocolLogin::onRecvFirstMessage(NetworkMessage &msg) {
 		},
 		__FUNCTION__
 	);
-}
-
-void ProtocolLogin::getCastViewersList(const std::string &password) {
-	auto output = OutputMessagePool::getOutputMessage();
-	output->addByte(0x14);
-	output->addString(fmt::format("{}\nWelcome to Cast System!", normal_random(1, 100)), "ProtocolLogin::getCastViewersList - fmt::format('{}\nWelcome to Cast System!', normal_random(1, 100))");
-
-	// Add session key
-	output->addByte(0x28);
-	output->addString(fmt::format("@cast\n{}", password), "ProtocolLogin::getCharacterList - accountDescriptor + password");
-
-	output->addByte(0x64);
-
-	output->addByte(1); // number of worlds
-
-	output->addByte(0); // world id
-	output->addString(g_configManager().getString(SERVER_NAME, __FUNCTION__), "ProtocolLogin::getCastViewersList - _configManager().getString(SERVER_NAME)");
-	output->addString(g_configManager().getString(IP, __FUNCTION__), "ProtocolLogin::getCastViewersList - g_configManager().getString(IP)");
-
-	output->add<uint16_t>(g_configManager().getNumber(GAME_PORT, __FUNCTION__));
-
-	output->addByte(0);
-
-	std::vector<std::shared_ptr<Player>> players;
-
-	for (const auto &it : ProtocolGame::getLiveCasts()) {
-		std::shared_ptr<Player> player = it.first;
-		if (!password.empty() && password != player->client->getCastPassword()) {
-			continue;
-		}
-		players.emplace_back(player);
-	}
-
-	uint8_t size = std::min<size_t>(std::numeric_limits<uint8_t>::max(), players.size());
-	output->addByte(size);
-	std::sort(players.begin(), players.end(), Player::sortByCastViewerCount);
-
-	for (const auto &player : players) {
-		output->addByte(0);
-		output->addString(player->getName(), "ProtocolLogin::getCastViewersList - player->getName()");
-	}
-
-	// Add premium days
-	output->addByte(0);
-
-	output->addByte(0);
-	output->add<uint32_t>(0);
-
-	output->add<uint16_t>(0);
-	send(std::move(output));
-	disconnect();
 }

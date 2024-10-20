@@ -42,7 +42,6 @@ public:
 			case ItemAttribute_t::DURATION_TIMESTAMP:
 			case ItemAttribute_t::TIER:
 			case ItemAttribute_t::AMOUNT:
-			case ItemAttribute_t::ITEMLEVEL:
 				return true;
 			default:
 				return false;

@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "declarations.hpp"
 #include "game/game.hpp"
 #include "io/iobestiary.hpp"
@@ -295,7 +293,7 @@ void IOBestiary::sendBuyCharmRune(std::shared_ptr<Player> player, charmRune_t ru
 		if (player->getCharmPoints() < charm->points) {
 			ss << "You don't have enough charm points to unlock this rune.";
 			player->sendFYIBox(ss.str());
-			player->sendBestiaryCharms();
+			player->BestiarysendCharms();
 			return;
 		}
 
@@ -321,7 +319,7 @@ void IOBestiary::sendBuyCharmRune(std::shared_ptr<Player> player, charmRune_t ru
 
 		if (limitRunes <= usedRunes.size()) {
 			player->sendFYIBox("You don't have any charm slots available.");
-			player->sendBestiaryCharms();
+			player->BestiarysendCharms();
 			return;
 		}
 
@@ -336,13 +334,13 @@ void IOBestiary::sendBuyCharmRune(std::shared_ptr<Player> player, charmRune_t ru
 		if (g_game().removeMoney(player, fee, 0, true)) {
 			resetCharmRuneCreature(player, charm);
 			player->sendFYIBox("You successfully removed the creature.");
-			player->sendBestiaryCharms();
+			player->BestiarysendCharms();
 			g_metrics().addCounter("balance_decrease", fee, { { "player", player->getName() }, { "context", "charm_removal" } });
 			return;
 		}
 		player->sendFYIBox("You don't have enough gold.");
 	}
-	player->sendBestiaryCharms();
+	player->BestiarysendCharms();
 }
 
 std::map<uint8_t, int16_t> IOBestiary::getMonsterElements(const std::shared_ptr<MonsterType> mtype) const {

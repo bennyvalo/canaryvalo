@@ -7,8 +7,6 @@
  * Website: https://docs.opentibiabr.com/
  */
 
-#include "pch.hpp"
-
 #include "lua/callbacks/event_callback.hpp"
 
 #include "utils/tools.hpp"
@@ -824,15 +822,7 @@ void EventCallback::playerOnGainExperience(std::shared_ptr<Player> player, std::
 	if (getScriptInterface()->protectedCall(L, 4, 1) != 0) {
 		LuaScriptInterface::reportError(nullptr, LuaScriptInterface::popString(L));
 	} else {
-		if (lua_isnumber(L, -1)) {
-			exp = LuaScriptInterface::getNumber<uint64_t>(L, -1);
-		} else {
-			// Log warning if the return value is not a number
-			reportErrorFunc(fmt::format("[EventCallback::playerOnGainExperience - "
-			                            "Player '{}' target '{}'] "
-			                            "Lua callback did not return experience value. Using the original exp value.",
-			                            player->getName(), target->getName()));
-		}
+		exp = LuaScriptInterface::getNumber<uint64_t>(L, -1);
 		lua_pop(L, 1);
 	}
 
